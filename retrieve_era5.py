@@ -7,6 +7,7 @@ Output file: tp_20170101-20170102.nc
 '''
 import cdsapi
 import sys
+import pandas as pd
 from datetime import datetime, timedelta
 from calendar import monthrange
 
@@ -123,24 +124,36 @@ for nr in range(len(requests)):
 print('---------------------------------------------------------------')
 print('  running request for ERA5 atmospheric data')
 print('---------------------------------------------------------------')
-outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),outfile)
 
-r = c.retrieve('reanalysis-era5-complete', {
-    'class'   : 'ea',
-    'expver'  : '1',
-    'stream'  : 'oper',
-    'type'    : 'an',
-    'param'   : '129.128/130.128/131.128/132.128/133.128/135.128/155.128/246.128/247.128',
-    'levtype' : 'ml',
-    'levelist': '30/to/137',  # basically query all levels below 30 km
-    'date'    : date_string,
-    'area'    : strArea,
-    'grid'    : '0.25/0.25',
-    'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
-    'format'  : 'netcdf'
-})
 
-r.download(outnameatm)
+atm_parameters = ['130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
+#atm_parameters = ['129.128','155.128','246.128','247.128']
+
+#daterange = pd.date_range(start=date_start,end=date_end,freq='D')
+
+#for cdate in daterange:
+#	cdatestr = '{:s}-{:s}-{:s}'.format(str(cdate.year),str(cdate.month).zfill(2),str(cdate.day).zfill(2))
+for param in atm_parameters:
+	print('   querying {:s}'.format(param))
+	#outnameatm = '{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(cdate.year),str(cdate.month).zfill(2),str(cdate.day).zfill(2),param,outfile)
+	outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
+
+	r = c.retrieve('reanalysis-era5-complete', {
+		'class'   : 'ea',
+		'expver'  : '1',
+		'stream'  : 'oper',
+		'type'    : 'an',
+		'param'   : param,
+		'levtype' : 'ml',
+		'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+		'date'    : date_string,
+		'area'    : strArea,
+		'grid'    : '0.25/0.25',
+		'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
+		'format'  : 'netcdf'
+	})
+
+	r.download(outnameatm)
 
 
 # query surface data
