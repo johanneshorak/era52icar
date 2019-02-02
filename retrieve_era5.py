@@ -153,9 +153,10 @@ while n < len(atm_parameters):
     if not os.path.isfile(outnameatm):
         print('   error querying {:s}, retrying'.format(param))
     else:
-        t1 = time.time()
-        print('   wall-time: {:s}'.format(hms_string(t1-t0)))
         n+=1
+        
+    t1 = time.time()
+    print('   wall-time: {:s}'.format(hms_string(t1-t0)))
 
 
 # query surface data
@@ -200,9 +201,14 @@ while nr < len(requests):
     if not os.path.isfile(outnamesfc):
         print('   error querying request {:n}, retrying'.format(nr))
     else:
-        t1 = time.time()
-        print('   wall-time: {:s}'.format(hms_string(t1-t0)))
         nr+=1
+        
+    t1 = time.time()
+    print('   wall-time: {:s}'.format(hms_string(t1-t0)))
 
 t1 = time.time()
-print('total wall-time: {:s}'.format(hms_string(t1-t_total)))
+print(' total wall-time: {:s}'.format(hms_string(t1-t_total)))
+print(' assembling all files into one...')
+
+e5_ds = xa.open_mfdataset('./*.nc')
+e5_ds.to_netcdf('./{:s}.nc'.format(outfile))
