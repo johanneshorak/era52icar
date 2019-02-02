@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from calendar import monthrange
 import os.path
 import time
+import xarray as xa
 
 c = cdsapi.Client()
 
@@ -15,13 +16,22 @@ def hms_string(sec_elapsed):
     s = sec_elapsed % 60.
     return "{}:{:>02}:{:>05.2f}".format(h, m, s)
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 4:
     print(' not enough parameters supplied!')
     sys.exit(1)
 
 strArea = sys.argv[1] # N/W/S/E
 date    = sys.argv[2] # %Y-%m-%d/to/%Y-%m-%d
 outfile = sys.argv[3] 
+
+# if the 4th argument is sim then this script does not send the request.
+# for this to work without errors the files already need to be pre-placed
+# in the corresponding folders.
+simulated = False
+if len(sys.argv) == 5:
+    if sys.argv[4] == 'simulate':
+        simulated = True
+        print(' simulating request!')
 
 date_array    = date.split('/')
 date_start    = datetime.strptime(date_array[0],'%Y-%m-%d')
@@ -119,10 +129,9 @@ print('---------------------------------------------------------------')
 
 
 atm_parameters = ['130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
-
-n = 0
-
-t0_total = time.time()
+t0_total       = time.time()
+n              = 0
+ncfiles        = []       # list that contains all nc files that need to be merged at the end
 
 while n < len(atm_parameters):
     t0    = time.time()                       # clock the required wall-time of the request
@@ -132,28 +141,29 @@ while n < len(atm_parameters):
     
     outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
 
-    r = c.retrieve('reanalysis-era5-complete', {
-        'class'   : 'ea',
-        'expver'  : '1',
-        'stream'  : 'oper',
-        'type'    : 'an',
-        'param'   : param,
-        'levtype' : 'ml',
-        'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
-        'date'    : date_string,
-        'area'    : strArea,
-        'grid'    : '0.25/0.25',
-        'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
-        'format'  : 'netcdf'
-    })
-
-    r.download(outnameatm)
+    if not simulated:
+        r = c.retrieve('reanalysis-era5-complete', {
+            'class'   : 'ea',
+            'expver'  : '1',
+            'stream'  : 'oper',
+            'type'    : 'an',
+            'param'   : param,
+            'levtype' : 'ml',
+            'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+            'date'    : date_string,
+            'area'    : strArea,
+            'grid'    : '0.25/0.25',
+            'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
+            'format'  : 'netcdf'
+        })
+        r.download(outnameatm)
     
     # test whether the file downloaded. if not redo the current parameter
     if not os.path.isfile(outnameatm):
         print('   error querying {:s}, retrying'.format(param))
     else:
         n+=1
+        ncfiles.append(outnameatm)
         
     t1 = time.time()
     print('   wall-time: {:s}'.format(hms_string(t1-t0)))
@@ -180,35 +190,47 @@ while nr < len(requests):
         
     outnamesfc = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_sfc.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),outfile)
     
-    r = c.retrieve('reanalysis-era5-single-levels', {
-        'grid'        : '0.25/0.25',
-        'product_type': 'reanalysis',
-        'variable'    : ['orography','surface_pressure'],          # query geopotential height and surface pressure
-        'area'    : strArea,
-        'grid'    : '0.25/0.25',
-        'year':     str(year),
-        'month':    str(month).zfill(2),
-        'day':      days,
-        'time':     ['00:00','01:00','02:00','03:00','04:00','05:00',
-                     '06:00','07:00','08:00','09:00','10:00','11:00',
-                     '12:00','13:00','14:00','15:00','16:00','17:00',
-                     '18:00','19:00','20:00','21:00','22:00','23:00'],
-        'format'  : 'netcdf'
-    })
-    r.download(outnamesfc)
+    if not simulated:
+        r = c.retrieve('reanalysis-era5-single-levels', {
+            'grid'        : '0.25/0.25',
+            'product_type': 'reanalysis',
+            'variable'    : ['orography','surface_pressure'],          # query geopotential height and surface pressure
+            'area'    : strArea,
+            'grid'    : '0.25/0.25',
+            'year':     str(year),
+            'month':    str(month).zfill(2),
+            'day':      days,
+            'time':     ['00:00','01:00','02:00','03:00','04:00','05:00',
+                         '06:00','07:00','08:00','09:00','10:00','11:00',
+                         '12:00','13:00','14:00','15:00','16:00','17:00',
+                         '18:00','19:00','20:00','21:00','22:00','23:00'],
+            'format'  : 'netcdf'
+        })
+        r.download(outnamesfc)
 
     # test whether the file downloaded. if not redo the current parameter
     if not os.path.isfile(outnamesfc):
         print('   error querying request {:n}, retrying'.format(nr))
     else:
         nr+=1
+        ncfiles.append(outnamesfc)
         
     t1 = time.time()
     print('   wall-time: {:s}'.format(hms_string(t1-t0)))
 
 t1 = time.time()
-print(' total wall-time: {:s}'.format(hms_string(t1-t_total)))
+print(' total wall-time: {:s}'.format(hms_string(t1-t0_total)))
 print(' assembling all files into one...')
 
-e5_ds = xa.open_mfdataset('./*.nc')
+e5_ds = None
+for f in ncfiles:
+    print('  merging {:s}'.format(f))
+    if e5_ds is None:
+        e5_ds = xa.open_dataset('./{:s}'.format(f))
+    else:
+        e5_ds = e5_ds.merge(xa.open_dataset('./{:s}'.format(f)))
+
+e5_ds = e5_ds.sel(level=slice(30,137))        # mainly to preserve diskspace. one month of forcing
+                                              # needs almost 10GB of data but we don't need levels
+                                              # above 30km
 e5_ds.to_netcdf('./{:s}.nc'.format(outfile))
