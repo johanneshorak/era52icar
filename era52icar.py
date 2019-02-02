@@ -6,46 +6,26 @@ import matplotlib.pyplot as plt
 import lib.gpcalc as gpcalc
 import sys as sys
 
-if len(sys.argv) < 4:
-    print(' syntax: python era52icar.py [atm_file] [sfc_file] [outname]')
+if len(sys.argv) < 3:
+    print(' syntax: python era52icar.py [era5_file] [outname]')
     sys.exit(1)
-    
-atm_nc = sys.argv[1]
-sfc_nc = sys.argv[2]
-outname = sys.argv[3]
 
+e5_nc   = sys.argv[1]
+outname = sys.argv[2]
 
 try:
-    atm_ds = xa.open_dataset('./{:s}'.format(atm_nc))
+    era5_ds = xa.open_dataset('./{:s}'.format(e5_nc))
 except:
-    print(' error opening {:s}!'.format(atm_nc))
+    print(' error opening {:s}!'.format(e5_nc))
     sys.exit(1)
 
-try:
-    sfc_ds = xa.open_dataset('./{:s}'.format(sfc_nc))
-except:
-    print(' error opening {:s}!'.format(sfc_nc))
-    sys.exit(1)
-        
 try:
     ml_df  = pd.read_csv('./data/model_level.csv',index_col='n')
 except:
     print(' error opening model level data!')
     sys.exit(1)
 
-
-#test whether surface and atmospheric dataset coordinates match
-
-if False in (sfc_ds.time == atm_ds.time).values:
-    print(' time dimension not matching')
-    
-if False in (sfc_ds.longitude == atm_ds.longitude).values:
-    print(' longitude not matching')
-    
-if False in (sfc_ds.latitude == atm_ds.latitude).values:
-    print(' latitude not matching')
-    
-era5_ds = atm_ds.merge(sfc_ds)
+#era5_ds = era5_ds.sel(level=slice(130,137)) # just for testing
 
 gpcalc.set_data(era5_ds,ml_df,137)    # set the data required for calculations
 
@@ -108,7 +88,7 @@ for n in range(0,Nlvl):
 era5_ds['p'] = (['time','level','latitude','longitude'],p)
 era5_ds['ph'] = (['time','level','latitude','longitude'],ph)
 
-
+print(' assigning data to forcing xarray dataset')
 # prepare the data arrays
 west_east = range(0,Nlon)
 south_north = range(0,Nlon)
@@ -196,6 +176,10 @@ frc_ds['PHB'].attrs['units']         = ''
 frc_ds['PHB'].attrs['long_name']     = 'unused variable'
 frc_ds['PHB'].attrs['standard_name'] = ''
 
+frc_ds['Time'].encoding['units']         = 'hours since 1900-01-01 00:00:0.0'
+frc_ds['Time'].encoding['dtype']         = 'f4'
+frc_ds['Time'].encoding['calendar']      = 'gregorian'
+
 for n in range(len(varmap)):
     row = varmap[n]
     eravar  = row[0]
@@ -203,6 +187,12 @@ for n in range(len(varmap)):
     for key in era5_ds[eravar].attrs:
         val = era5_ds[eravar].attrs[key]
         frc_ds[frcvar].attrs[key] = val
-        
-        
-frc_ds.to_netcdf('./{:s}'.format(outname))
+
+comp     = dict(zlib=True, complevel=5)
+encoding = {var: comp for var in frc_ds.data_vars}
+
+print(' writing to disk and compressing...')
+frc_ds.to_netcdf('./{:s}'.format(outname),encoding=encoding)
+print(' finished')
+
+
