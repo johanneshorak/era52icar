@@ -1,18 +1,19 @@
 #!/usr/bin/env python
-'''
-Save as get-tp.py, then run 'python get-tp.py'.
-  
-Input file : None
-Output file: tp_20170101-20170102.nc
-'''
 import cdsapi
 import sys
 import pandas as pd
 from datetime import datetime, timedelta
 from calendar import monthrange
-
+import os.path
+import time
 
 c = cdsapi.Client()
+
+def hms_string(sec_elapsed):
+    h = int(sec_elapsed / (60 * 60))
+    m = int((sec_elapsed % (60 * 60)) / 60)
+    s = sec_elapsed % 60.
+    return "{}:{:>02}:{:>05.2f}".format(h, m, s)
 
 if len(sys.argv) < 3:
     print(' not enough parameters supplied!')
@@ -22,23 +23,24 @@ strArea = sys.argv[1] # N/W/S/E
 date    = sys.argv[2] # %Y-%m-%d/to/%Y-%m-%d
 outfile = sys.argv[3] 
 
-date_array	= date.split('/')
-date_start	= datetime.strptime(date_array[0],'%Y-%m-%d')
-date_end	= datetime.strptime(date_array[2],'%Y-%m-%d')
+date_array    = date.split('/')
+date_start    = datetime.strptime(date_array[0],'%Y-%m-%d')
+date_end    = datetime.strptime(date_array[2],'%Y-%m-%d')
 
-date_start_new 	= date_start
-date_end_new	= date_end# + timedelta(days=1)
+date_start_new     = date_start
+date_end_new    = date_end# + timedelta(days=1)
 
-date_start_string 	= str(date_start_new.year)+'-'+str(date_start_new.month).zfill(2)+'-'+str(date_start_new.day).zfill(2)
-date_end_string 	= str(date_end_new.year)+'-'+str(date_end_new.month).zfill(2)+'-'+str(date_end_new.day).zfill(2)
-date_string = date_start_string+'/to/'+date_end_string
+date_start_string     = str(date_start_new.year)+'-'+str(date_start_new.month).zfill(2)+'-'+str(date_start_new.day).zfill(2)
+date_end_string     = str(date_end_new.year)+'-'+str(date_end_new.month).zfill(2)+'-'+str(date_end_new.day).zfill(2)
+date_string         = date_start_string+'/to/'+date_end_string
 
 print(' era5 reanalysis retrieval running...')
 print('  region   : '+strArea)
 print('  dates    : '+date_string)
 print('  outfile  : '+outfile)
 
-
+# for the surface variable sp we construct the request differently.
+#
 # this assumes that we query something where we need to download 3 months.
 # e.g. 
 #      26th of february to 28th of february 2009
@@ -68,10 +70,6 @@ else:
     year1  = year0
     sameyear = True
 
-
-#months = list(range(month0,month1+1))
-#years  = list(range(year0,year1+1))
-
 print('')
 # construct temporal boundaries of the request
 if month0 != month2:
@@ -96,11 +94,6 @@ if not sameyear and not((month0 == 12) and (month1 == 1)):
 for nr in range(len(requests)):
     print('    ',requests[nr])
 
-#sys.exit(1)
-
-
-#outnameatm = '{:s}_atm.nc'.format(outfile)
-
 # ----------------------------------------------------------------
 # parameter ids
 # ----------------------------------------------------------------
@@ -118,7 +111,6 @@ for nr in range(len(requests)):
 # 246 ... specific cloud liquid water content
 # 247 ... specific cloud ice water content
 
-
 # query atmospheric data
 
 print('---------------------------------------------------------------')
@@ -127,41 +119,54 @@ print('---------------------------------------------------------------')
 
 
 atm_parameters = ['130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
-#atm_parameters = ['129.128','155.128','246.128','247.128']
 
-#daterange = pd.date_range(start=date_start,end=date_end,freq='D')
+n = 0
 
-#for cdate in daterange:
-#	cdatestr = '{:s}-{:s}-{:s}'.format(str(cdate.year),str(cdate.month).zfill(2),str(cdate.day).zfill(2))
-for param in atm_parameters:
-	print('   querying {:s}'.format(param))
-	#outnameatm = '{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(cdate.year),str(cdate.month).zfill(2),str(cdate.day).zfill(2),param,outfile)
-	outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
+t0_total = time.time()
 
-	r = c.retrieve('reanalysis-era5-complete', {
-		'class'   : 'ea',
-		'expver'  : '1',
-		'stream'  : 'oper',
-		'type'    : 'an',
-		'param'   : param,
-		'levtype' : 'ml',
-		'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
-		'date'    : date_string,
-		'area'    : strArea,
-		'grid'    : '0.25/0.25',
-		'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
-		'format'  : 'netcdf'
-	})
+while n < len(atm_parameters):
+    t0    = time.time()                       # clock the required wall-time of the request
+    param = atm_parameters[n]
+    
+    print('   querying {:s}'.format(param))
+    
+    outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
 
-	r.download(outnameatm)
+    r = c.retrieve('reanalysis-era5-complete', {
+        'class'   : 'ea',
+        'expver'  : '1',
+        'stream'  : 'oper',
+        'type'    : 'an',
+        'param'   : param,
+        'levtype' : 'ml',
+        'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+        'date'    : date_string,
+        'area'    : strArea,
+        'grid'    : '0.25/0.25',
+        'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
+        'format'  : 'netcdf'
+    })
+
+    r.download(outnameatm)
+    
+    # test whether the file downloaded. if not redo the current parameter
+    if not os.path.isfile(outnameatm):
+        print('   error querying {:s}, retrying'.format(param))
+    else:
+        t1 = time.time()
+        print('   wall-time: {:s}'.format(hms_string(t1-t0)))
+        n+=1
 
 
 # query surface data
 print('---------------------------------------------------------------')
 print('  running request for ERA5 surface data')
 print('---------------------------------------------------------------')
-for nr in range(len(requests)):
-    req = requests[nr]
+nr = 0
+while nr < len(requests):
+    t0    = time.time()                       # clock the required wall-time of the request
+    req   = requests[nr]
+    
     print('   working on request ',req)
     day0  = req[0]
     day1  = req[1]
@@ -190,3 +195,14 @@ for nr in range(len(requests)):
         'format'  : 'netcdf'
     })
     r.download(outnamesfc)
+
+    # test whether the file downloaded. if not redo the current parameter
+    if not os.path.isfile(outnamesfc):
+        print('   error querying request {:n}, retrying'.format(nr))
+    else:
+        t1 = time.time()
+        print('   wall-time: {:s}'.format(hms_string(t1-t0)))
+        nr+=1
+
+t1 = time.time()
+print('total wall-time: {:s}'.format(hms_string(t1-t_total)))
