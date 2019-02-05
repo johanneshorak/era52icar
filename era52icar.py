@@ -177,6 +177,10 @@ frc_ds['TH'].attrs['units']         = 'K'
 frc_ds['TH'].attrs['long_name']     = 'potential temperature'
 frc_ds['TH'].attrs['standard_name'] = 'potential_temperature'
 
+frc_ds['TSK'].attrs['units']         = ''
+frc_ds['TSK'].attrs['long_name']     = 'unused variable'
+frc_ds['TSK'].attrs['standard_name'] = ''
+
 frc_ds['PB'].attrs['units']         = ''
 frc_ds['PB'].attrs['long_name']     = 'unused variable'
 frc_ds['PB'].attrs['standard_name'] = ''
