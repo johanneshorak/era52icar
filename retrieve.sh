@@ -21,5 +21,5 @@ do
 	esac
 	shift # past argument or value
 done
-python retrieve_era5.py $REGION $DATES $outfile | tee ./log/"${outfile}.log" 
+python retrieve_era5.py $REGION $DATES $outfile | tee -a ./log/"${outfile}.log" 
 
