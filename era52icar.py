@@ -107,6 +107,8 @@ QCLOUD      = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 QICE        = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 PHB         = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
 PB          = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
+TSK         = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
+TH          = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # potential temperature
 
 # set values
 U          = era5_ds.u[:,::-1,::-1,:]
@@ -117,6 +119,8 @@ QCLOUD     = era5_ds.clwc[:,::-1,::-1,:]
 QICE       = era5_ds.ciwc[:,::-1,::-1,:]
 PH         = era5_ds.ph[:,::-1,::-1,:]
 HGT        = era5_ds.z[:,::-1,:]/9.81
+
+TH         = era5_ds.t[:,::-1,:]*((10.**5)/P)**(0.2854)
 
 xlong[:,:] = era5_ds.longitude
 
@@ -142,7 +146,8 @@ frc_ds = xa.Dataset(
         'QICE'     : (['Time','bottom_top','south_north','west_east'],QICE),
         'PB'       : (['Time','bottom_top','south_north','west_east'],PB),
         'PHB'      : (['Time','bottom_top','south_north','west_east'],PHB),
-        
+        'TSK'      : (['Time','bottom_top','south_north','west_east'],TSK),
+        'TH'       : (['Time','bottom_top','south_north','west_east'],TH)
     }
 )
 
@@ -167,6 +172,10 @@ frc_ds['HGT'].attrs['standard_name'] = 'surface_geopotential_height'
 frc_ds['PH'].attrs['units']         = 'm'
 frc_ds['PH'].attrs['long_name']     = 'geopotential height of grid cell'
 frc_ds['PH'].attrs['standard_name'] = 'geopotential_height'
+
+frc_ds['TH'].attrs['units']         = 'K'
+frc_ds['TH'].attrs['long_name']     = 'potential temperature'
+frc_ds['TH'].attrs['standard_name'] = 'potential_temperature'
 
 frc_ds['PB'].attrs['units']         = ''
 frc_ds['PB'].attrs['long_name']     = 'unused variable'
