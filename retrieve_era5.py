@@ -133,6 +133,7 @@ t0_total       = time.time()
 n              = 0
 ncfiles        = []       # list that contains all nc files that need to be merged at the end
 
+
 while n < len(atm_parameters):
     t0    = time.time()                       # clock the required wall-time of the request
     param = atm_parameters[n]
@@ -141,6 +142,13 @@ while n < len(atm_parameters):
     
     outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
 
+    # test whether the file was already downloaded. if so continue with next parameter
+    if os.path.isfile(outnameatm):
+        print('     {:s} already downloaded!'.format(param))
+        n+=1
+        ncfiles.append(outnameatm)
+        continue
+        
     if not simulated:
         r = c.retrieve('reanalysis-era5-complete', {
             'class'   : 'ea',
