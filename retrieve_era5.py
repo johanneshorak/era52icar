@@ -127,138 +127,110 @@ print('---------------------------------------------------------------')
 print('  running request for ERA5 atmospheric data')
 print('---------------------------------------------------------------')
 
-download_failed = True
 
-while download_failed:
-	atm_parameters = ['130.128','131.128','132.128','133.128','135.128','246.128','247.128','155.128']
-	t0_total       = time.time()
-	n              = 0
-	ncfiles        = []       # list that contains all nc files that need to be merged at the end
+atm_parameters = ['130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
+t0_total       = time.time()
+n              = 0
+ncfiles        = []       # list that contains all nc files that need to be merged at the end
 
-	while n < len(atm_parameters):
-		t0    = time.time()                       # clock the required wall-time of the request
-		param = atm_parameters[n]
-		
-		print('   querying {:s}'.format(param))
-		
-		outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
+while n < len(atm_parameters):
+    t0    = time.time()                       # clock the required wall-time of the request
+    param = atm_parameters[n]
+    
+    print('   querying {:s}'.format(param))
+    
+    outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
 
-		# test whether the file was already downloaded. if so continue with next parameter
-		if os.path.isfile(outnameatm):
-			print('     {:s} already downloaded!'.format(param))
-			n+=1
-			ncfiles.append(outnameatm)
-			continue
-			
-		if not simulated:
-			try:
-				r = c.retrieve('reanalysis-era5-complete', {
-					'class'   : 'ea',
-					'expver'  : '1',
-					'stream'  : 'oper',
-					'type'    : 'an',
-					'param'   : param,
-					'levtype' : 'ml',
-					'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
-					'date'    : date_string,
-					'area'    : strArea,
-					'grid'    : '0.25/0.25',
-					'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
-					'format'  : 'netcdf'
-				})
-				r.download(outnameatm)
-			except:
-				print('     something seems to have gone wrong with the request...')
-				
-		# test whether the file downloaded. if not redo the current parameter
-		if not os.path.isfile(outnameatm):
-			print('     error querying {:s}, retrying'.format(param))
-			continue
-		else:
-			n+=1
-			ncfiles.append(outnameatm)
-			
-		t1 = time.time()
-		print('   wall-time: {:s}'.format(hms_string(t1-t0)))
+    if not simulated:
+        r = c.retrieve('reanalysis-era5-complete', {
+            'class'   : 'ea',
+            'expver'  : '1',
+            'stream'  : 'oper',
+            'type'    : 'an',
+            'param'   : param,
+            'levtype' : 'ml',
+            'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+            'date'    : date_string,
+            'area'    : strArea,
+            'grid'    : '0.25/0.25',
+            'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
+            'format'  : 'netcdf'
+        })
+        r.download(outnameatm)
+    
+    # test whether the file downloaded. if not redo the current parameter
+    if not os.path.isfile(outnameatm):
+        print('   error querying {:s}, retrying'.format(param))
+    else:
+        n+=1
+        ncfiles.append(outnameatm)
+        
+    t1 = time.time()
+    print('   wall-time: {:s}'.format(hms_string(t1-t0)))
 
 
-	# query surface data
-	print('---------------------------------------------------------------')
-	print('  running request for ERA5 surface data')
-	print('---------------------------------------------------------------')
-	nr = 0
-	while nr < len(requests):
-		t0    = time.time()                       # clock the required wall-time of the request
-		req   = requests[nr]
-		
-		print('   working on request ',req)
-		day0  = req[0]
-		day1  = req[1]
-		month = req[2]
-		year  = req[3]
-		
-		days  = list(map(str,range(day0,day1+1)))
-		for ns,s in enumerate(days):
-			days[ns] = s.zfill(2) # need days in 02, 03,.. etc formatting
-			
-		outnamesfc = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_sfc.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),outfile)
-	   
-		if os.path.isfile(outnamesfc):  # check if file was already downloaded:
-			print('     {:s} already downloaded for request {:n}!'.format(param,nr))
-			nr+=1
-			ncfiles.append(outnamesfc)
-			continue
+# query surface data
+print('---------------------------------------------------------------')
+print('  running request for ERA5 surface data')
+print('---------------------------------------------------------------')
+nr = 0
+while nr < len(requests):
+    t0    = time.time()                       # clock the required wall-time of the request
+    req   = requests[nr]
+    
+    print('   working on request ',req)
+    day0  = req[0]
+    day1  = req[1]
+    month = req[2]
+    year  = req[3]
+    
+    days  = list(map(str,range(day0,day1+1)))
+    for ns,s in enumerate(days):
+        days[ns] = s.zfill(2) # need days in 02, 03,.. etc formatting
+        
+    outnamesfc = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_sfc.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),outfile)
+    
+    if not simulated:
+        r = c.retrieve('reanalysis-era5-single-levels', {
+            'grid'        : '0.25/0.25',
+            'product_type': 'reanalysis',
+            'variable'    : ['orography','surface_pressure'],          # query geopotential height and surface pressure
+            'area'    : strArea,
+            'grid'    : '0.25/0.25',
+            'year':     str(year),
+            'month':    str(month).zfill(2),
+            'day':      days,
+            'time':     ['00:00','01:00','02:00','03:00','04:00','05:00',
+                         '06:00','07:00','08:00','09:00','10:00','11:00',
+                         '12:00','13:00','14:00','15:00','16:00','17:00',
+                         '18:00','19:00','20:00','21:00','22:00','23:00'],
+            'format'  : 'netcdf'
+        })
+        r.download(outnamesfc)
 
-		if not simulated:
-			try:
-				r = c.retrieve('reanalysis-era5-single-levels', {
-					'grid'        : '0.25/0.25',
-					'product_type': 'reanalysis',
-					'variable'    : ['orography','surface_pressure'],          # query geopotential height and surface pressure
-					'area'    : strArea,
-					'grid'    : '0.25/0.25',
-					'year':     str(year),
-					'month':    str(month).zfill(2),
-					'day':      days,
-					'time':     ['00:00','01:00','02:00','03:00','04:00','05:00',
-								 '06:00','07:00','08:00','09:00','10:00','11:00',
-								 '12:00','13:00','14:00','15:00','16:00','17:00',
-								 '18:00','19:00','20:00','21:00','22:00','23:00'],
-					'format'  : 'netcdf'
-				})
-				r.download(outnamesfc)
-			except:
-				print('     something seems to have gone wrong with the request...')
-		# test whether the file downloaded. if not redo the current parameter
-		if not os.path.isfile(outnamesfc):
-			print('     error querying request {:n}, retrying'.format(nr))
-			continue
-		else:
-			nr+=1
-			ncfiles.append(outnamesfc)
-			
-		t1 = time.time()
-		print('   wall-time: {:s}'.format(hms_string(t1-t0)))
+    # test whether the file downloaded. if not redo the current parameter
+    if not os.path.isfile(outnamesfc):
+        print('   error querying request {:n}, retrying'.format(nr))
+    else:
+        nr+=1
+        ncfiles.append(outnamesfc)
+        
+    t1 = time.time()
+    print('   wall-time: {:s}'.format(hms_string(t1-t0)))
 
-	t1 = time.time()
-	print(' total wall-time: {:s}'.format(hms_string(t1-t0_total)))
-	print(' assembling all files into one...')
+t1 = time.time()
+print(' total wall-time: {:s}'.format(hms_string(t1-t0_total)))
+print(' assembling all files into one...')
 
-	e5_ds = None
-	for f in ncfiles:
-		print('  merging {:s}'.format(f))
-		if e5_ds is None:
-			e5_ds = xa.open_dataset('./{:s}'.format(f))
-		else:
-			e5_ds = e5_ds.merge(xa.open_dataset('./{:s}'.format(f)))
+e5_ds = None
+for f in ncfiles:
+    print('  merging {:s}'.format(f))
+    if e5_ds is None:
+        e5_ds = xa.open_dataset('./{:s}'.format(f))
+    else:
+        e5_ds = e5_ds.merge(xa.open_dataset('./{:s}'.format(f)))
 
-	e5_ds = e5_ds.sel(level=slice(30,137))        # mainly to preserve diskspace. one month of forcing
-												  # needs almost 10GB of data but we don't need levels
-												  # above 30km
-	e5_ds.to_netcdf('./{:s}.nc'.format(outfile))
-	
-	if not os.path.isfile('./{:s}.nc'.format(outfile)):
-		download_failed = True
-		print('something went wrong, retrying...')
-	else:
-		download_failed = False
+e5_ds = e5_ds.sel(level=slice(30,137))        # mainly to preserve diskspace. one month of forcing
+                                              # needs almost 10GB of data but we don't need levels
+                                              # above 30km
+e5_ds.to_netcdf('./{:s}.nc'.format(outfile))
