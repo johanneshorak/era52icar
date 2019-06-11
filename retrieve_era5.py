@@ -139,31 +139,46 @@ while n < len(atm_parameters):
     
     print('   querying {:s}'.format(param))
     
-    outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year0),str(month0).zfill(2),str(day0).zfill(2),str(year2),str(month2).zfill(2),str(day2).zfill(2),param,outfile)
+    nr = 0
+    while nr < len(requests):
+        req   = requests[nr]
+        
+        print('   working on request ',req)
+        day0  = req[0]
+        day1  = req[1]
+        month = req[2]
+        year  = req[3]
+        
+        days  = list(map(str,range(day0,day1+1)))
+        for ns,s in enumerate(days):
+            days[ns] = s.zfill(2) # need days in 02, 03,.. etc formatting
+            
+        outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),param,outfile)
 
-    if not simulated:
-        r = c.retrieve('reanalysis-era5-complete', {
-            'class'   : 'ea',
-            'expver'  : '1',
-            'stream'  : 'oper',
-            'type'    : 'an',
-            'param'   : param,
-            'levtype' : 'ml',
-            'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
-            'date'    : date_string,
-            'area'    : strArea,
-            'grid'    : '0.25/0.25',
-            'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
-            'format'  : 'netcdf'
-        })
-        r.download(outnameatm)
-    
-    # test whether the file downloaded. if not redo the current parameter
-    if not os.path.isfile(outnameatm):
-        print('   error querying {:s}, retrying'.format(param))
-    else:
-        n+=1
-        ncfiles.append(outnameatm)
+        if not simulated:
+            r = c.retrieve('reanalysis-era5-complete', {
+                'class'   : 'ea',
+                'expver'  : '1',
+                'stream'  : 'oper',
+                'type'    : 'an',
+                'param'   : param,
+                'levtype' : 'ml',
+                'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+                'date'    : date_string,
+                'area'    : strArea,
+                'grid'    : '0.25/0.25',
+                'time'    : '00/01/02/03/04/05/06/07/08/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23',
+                'format'  : 'netcdf'
+            })
+            r.download(outnameatm)
+        
+        # test whether the file downloaded. if not redo the current parameter
+        if not os.path.isfile(outnameatm) and not simulated:
+            print('   error querying {:s}, retrying'.format(param))
+        else:
+            nr+=1
+            ncfiles.append(outnameatm)
+    n+=1
         
     t1 = time.time()
     print('   wall-time: {:s}'.format(hms_string(t1-t0)))
@@ -209,7 +224,7 @@ while nr < len(requests):
         r.download(outnamesfc)
 
     # test whether the file downloaded. if not redo the current parameter
-    if not os.path.isfile(outnamesfc):
+    if not os.path.isfile(outnamesfc) and not simulated:
         print('   error querying request {:n}, retrying'.format(nr))
     else:
         nr+=1
