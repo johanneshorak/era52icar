@@ -105,6 +105,8 @@ V           = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 QVAPOR      = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 QCLOUD      = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 QICE        = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
+QRAIN       = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
+QSNOW       = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)
 PHB         = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
 PB          = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
 TSK         = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # not used
@@ -114,9 +116,11 @@ T           = np.zeros(Nt*Nlvl*Nlon*Nlat).reshape(Nt,Nlvl,Nlat,Nlon)   # potenti
 U          = era5_ds.u[:,::-1,::-1,:]
 V          = era5_ds.v[:,::-1,::-1,:]
 P          = era5_ds.p[:,::-1,::-1,:]
-QVAPOR     = era5_ds.q[:,::-1,::-1,:]
-QCLOUD     = era5_ds.clwc[:,::-1,::-1,:]
-QICE       = era5_ds.ciwc[:,::-1,::-1,:]
+QVAPOR     = era5_ds.q[:,::-1,::-1,:]/(1.0-era5_ds.q[:,::-1,::-1,:])
+QCLOUD     = era5_ds.clwc[:,::-1,::-1,:]/(1.0-era5_ds.clwc[:,::-1,::-1,:])
+QICE       = era5_ds.ciwc[:,::-1,::-1,:]/(1.0-era5_ds.ciwc[:,::-1,::-1,:])
+QRAIN      = era5_ds.crwc[:,::-1,::-1,:]/(1.0-era5_ds.crwc[:,::-1,::-1,:])
+QSNOW      = era5_ds.cswc[:,::-1,::-1,:]/(1.0-era5_ds.cswc[:,::-1,::-1,:])
 PH         = era5_ds.ph[:,::-1,::-1,:]
 HGT        = era5_ds.z[:,::-1,:]/9.81
 
@@ -144,6 +148,8 @@ frc_ds = xa.Dataset(
         'QVAPOR'   : (['Time','bottom_top','south_north','west_east'],QVAPOR),
         'QCLOUD'   : (['Time','bottom_top','south_north','west_east'],QCLOUD),
         'QICE'     : (['Time','bottom_top','south_north','west_east'],QICE),
+        'QRAIN'    : (['Time','bottom_top','south_north','west_east'],QRAIN),
+        'QSNOW'    : (['Time','bottom_top','south_north','west_east'],QSNOW),
         'PB'       : (['Time','bottom_top','south_north','west_east'],PB),
         'PHB'      : (['Time','bottom_top','south_north','west_east'],PHB),
         'TSK'      : (['Time','bottom_top','south_north','west_east'],TSK),
@@ -158,7 +164,9 @@ varmap=[
     ['v','V'],
     ['q','QVAPOR'],
     ['clwc','QCLOUD'],
-    ['ciwc','QICE']
+    ['ciwc','QICE'],
+    ['crwc','QRAIN'],
+    ['cswc','QSNOW']
 ]
 
 frc_ds['P'].attrs['units']         = 'Pa'
