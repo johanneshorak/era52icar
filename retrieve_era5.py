@@ -109,6 +109,8 @@ for nr in range(len(requests)):
 # ----------------------------------------------------------------
 # https://confluence.ecmwf.int/display/CKB/ERA5+data+documentation
 #
+# 75  ... specific rain water content
+# 76  ... specific snow water content
 # 129 ... geopotential
 # 130 ... temperature
 # 131 ... U component of wind
@@ -128,7 +130,7 @@ print('  running request for ERA5 atmospheric data')
 print('---------------------------------------------------------------')
 
 
-atm_parameters = ['130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
+atm_parameters = ['75.128','76.128', '130.128','131.128','132.128','133.128','135.128','155.128','246.128','247.128']
 t0_total       = time.time()
 n              = 0
 ncfiles        = []       # list that contains all nc files that need to be merged at the end
@@ -155,7 +157,7 @@ while n < len(atm_parameters):
             
         outnameatm = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_{:s}_atm.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),param,outfile)
 
-        if not simulated:
+        if not simulated and not os.path.isfile(outnameatm):
             r = c.retrieve('reanalysis-era5-complete', {
                 'class'   : 'ea',
                 'expver'  : '1',
@@ -163,7 +165,7 @@ while n < len(atm_parameters):
                 'type'    : 'an',
                 'param'   : param,
                 'levtype' : 'ml',
-                'levelist': '1/to/137',  # basically query all levels below 30 km (starting from 30)
+                'levelist': '49/to/137',  # basically query all levels below 30 km (starting from 30)
                 'date'    : date_string,
                 'area'    : strArea,
                 'grid'    : '0.25/0.25',
@@ -205,7 +207,7 @@ while nr < len(requests):
         
     outnamesfc = '{:s}{:s}{:s}-{:s}{:s}{:s}_{:s}_sfc.nc'.format(str(year),str(month).zfill(2),str(day0).zfill(2),str(year),str(month).zfill(2),str(day1).zfill(2),outfile)
     
-    if not simulated:
+    if not simulated and not os.path.isfile(outnamesfc):
         r = c.retrieve('reanalysis-era5-single-levels', {
             'grid'        : '0.25/0.25',
             'product_type': 'reanalysis',
